@@ -33,7 +33,7 @@
 #ifndef __SDS_H
 #define __SDS_H
 
-#define SDS_MAX_PREALLOC (1024*1024)
+#define SDS_MAX_PREALLOC (1024*1024) // 最长分配长度
 const char *SDS_NOINIT;
 
 #include <sys/types.h>
@@ -42,8 +42,11 @@ const char *SDS_NOINIT;
 
 typedef char *sds;
 
+// sdshdr5 从来没有使用,仅仅直接访问flags
 /* Note: sdshdr5 is never used, we just access the flags byte directly.
+   然而这有5种SDS字符串的结构文档
  * However is here to document the layout of type 5 SDS strings. */
+// 使用__attribute__ 及__packed__来声明紧凑在一起而不对齐
 struct __attribute__ ((__packed__)) sdshdr5 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
@@ -80,11 +83,16 @@ struct __attribute__ ((__packed__)) sdshdr64 {
 #define SDS_TYPE_64 4
 #define SDS_TYPE_MASK 7
 #define SDS_TYPE_BITS 3
+// 声明了一个指向sdshdr##T的指针sh,##用于连接参数T
 #define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));
+// 同上,但没有变量名
 #define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))
+// 对于sdshdr5而言,变量flags,低3位存类型,剩下5位为长度
 #define SDS_TYPE_5_LEN(f) ((f)>>SDS_TYPE_BITS)
 
+// 根据不同flags获取长度
 static inline size_t sdslen(const sds s) {
+    // 技巧:s为指向真正内容的地方,往前一个字节则为flags
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -101,6 +109,7 @@ static inline size_t sdslen(const sds s) {
     return 0;
 }
 
+// 返回分配字节减去已使用字节数(即剩下的字节数),对于sdshdr5来说,恒返回0
 static inline size_t sdsavail(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -127,6 +136,7 @@ static inline size_t sdsavail(const sds s) {
     return 0;
 }
 
+// 对成员len进行重新赋值,对于sdshdr5而言,赋值位置为flags的高5位,未对newlen进行合法化判断
 static inline void sdssetlen(sds s, size_t newlen) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -151,6 +161,7 @@ static inline void sdssetlen(sds s, size_t newlen) {
     }
 }
 
+// 增加长度inc,也未对inc进行合法化判断
 static inline void sdsinclen(sds s, size_t inc) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -176,6 +187,7 @@ static inline void sdsinclen(sds s, size_t inc) {
     }
 }
 
+// 返回分配(申请)的长度
 /* sdsalloc() = sdsavail() + sdslen() */
 static inline size_t sdsalloc(const sds s) {
     unsigned char flags = s[-1];
@@ -194,6 +206,7 @@ static inline size_t sdsalloc(const sds s) {
     return 0;
 }
 
+// 对成员alloc进行重新赋值,对于sdshdr5而言,什么都不做,未c地newlen进行合法化判断
 static inline void sdssetalloc(sds s, size_t newlen) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
