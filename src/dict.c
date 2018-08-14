@@ -1161,13 +1161,15 @@ int main(int argc, char **argv) {
     } else {
         count = 5000000;
     }
+    long ss = 0;
 
     start_benchmark();
-    for (j = 0; j < count; j++) {
+    for (j = ss; j < count+ss; j++) {
         int retval = dictAdd(dict,sdsfromlonglong(j),(void*)j);
         assert(retval == DICT_OK);
     }
     end_benchmark("Inserting");
+    printf("size:%llu\n", dictSize(dict));
     assert((long)dictSize(dict) == count);
 
     /* Wait for rehashing. */
@@ -1176,7 +1178,7 @@ int main(int argc, char **argv) {
     }
 
     start_benchmark();
-    for (j = 0; j < count; j++) {
+    for (j = ss; j < count+ss; j++) {
         sds key = sdsfromlonglong(j);
         dictEntry *de = dictFind(dict,key);
         assert(de != NULL);
@@ -1185,7 +1187,7 @@ int main(int argc, char **argv) {
     end_benchmark("Linear access of existing elements");
 
     start_benchmark();
-    for (j = 0; j < count; j++) {
+    for (j = ss; j < count+ss; j++) {
         sds key = sdsfromlonglong(j);
         dictEntry *de = dictFind(dict,key);
         assert(de != NULL);
@@ -1194,8 +1196,8 @@ int main(int argc, char **argv) {
     end_benchmark("Linear access of existing elements (2nd round)");
 
     start_benchmark();
-    for (j = 0; j < count; j++) {
-        sds key = sdsfromlonglong(rand() % count);
+    for (j = ss; j < count+ss; j++) {
+        sds key = sdsfromlonglong(rand() % count + ss);
         dictEntry *de = dictFind(dict,key);
         assert(de != NULL);
         sdsfree(key);
@@ -1203,7 +1205,7 @@ int main(int argc, char **argv) {
     end_benchmark("Random access of existing elements");
 
     start_benchmark();
-    for (j = 0; j < count; j++) {
+    for (j = ss; j < count+ss; j++) {
         sds key = sdsfromlonglong(rand() % count);
         key[0] = 'X';
         dictEntry *de = dictFind(dict,key);
@@ -1213,7 +1215,7 @@ int main(int argc, char **argv) {
     end_benchmark("Accessing missing");
 
     start_benchmark();
-    for (j = 0; j < count; j++) {
+    for (j = ss; j < count+ss; j++) {
         sds key = sdsfromlonglong(j);
         int retval = dictDelete(dict,key);
         assert(retval == DICT_OK);
