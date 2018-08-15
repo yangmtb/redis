@@ -473,6 +473,8 @@ void dictRelease(dict *d)
     zfree(d);
 }
 
+unsigned long long maxlen = 0;
+
 dictEntry *dictFind(dict *d, const void *key)
 {
     dictEntry *he;
@@ -484,9 +486,13 @@ dictEntry *dictFind(dict *d, const void *key)
     for (table = 0; table <= 1; table++) {
         idx = h & d->ht[table].sizemask;
         he = d->ht[table].table[idx];
+        long long le = 0;
         while(he) {
-            if (key==he->key || dictCompareKeys(d, key, he->key))
+            if (key==he->key || dictCompareKeys(d, key, he->key)) {
+                maxlen = maxlen > le ? maxlen : le;
                 return he;
+            }
+            le++;
             he = he->next;
         }
         if (!dictIsRehashing(d)) return NULL;
@@ -1185,6 +1191,8 @@ int main(int argc, char **argv) {
         sdsfree(key);
     }
     end_benchmark("Linear access of existing elements");
+
+    printf("maxlen:%llu\n", maxlen);
 
     start_benchmark();
     for (j = ss; j < count+ss; j++) {
