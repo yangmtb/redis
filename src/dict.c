@@ -878,6 +878,7 @@ unsigned long dictScan(dict *d,
     } else {
         t0 = &d->ht[0];
         t1 = &d->ht[1];
+        printf("(rehash)");
 
         /* Make sure t0 is the smaller and t1 is the bigger table */
         if (t0->size > t1->size) {
@@ -1155,6 +1156,29 @@ dictType BenchmarkDictType = {
     printf(msg ": %ld items in %lld ms\n", count, elapsed); \
 } while(0);
 
+void dictScanFunc(void *privdata, const dictEntry *de)
+{
+  //printf("--------key:%s\n", ((sds)de->key));
+}
+
+#include <pthread.h>
+
+static int cc = 0;
+
+void * th(void *msg)
+{
+    dict *di = (dict *)(msg);
+    unsigned long vv = 0;
+    sleep(1);
+    while (0 != (vv = dictScan(di, vv, dictScanFunc, NULL, NULL))) {
+      printf("->%llu ", vv);
+      cc++;
+      //sleep(1);
+    }
+    printf("\n done:%d\n", cc);
+
+}
+
 /* dict-benchmark [count] */
 int main(int argc, char **argv) {
     long j;
@@ -1167,7 +1191,21 @@ int main(int argc, char **argv) {
     } else {
         count = 5000000;
     }
+
+    pthread_t pt;
+    int err = pthread_create(&pt, NULL, &th, dict);
+
     long ss = 0;
+    int nn = 1<<11;
+    for (int i = 0; i < nn; ++i) {
+        dictAdd(dict, sdsfromlonglong(i), (void *)i);
+        //printf("rehash:%d\n", dict->rehashidx);
+    }
+
+    printf("dict size:%d\n", dictSize(dict));
+    pthread_join(pt, NULL);
+
+    return 0;
 
     start_benchmark();
     for (j = ss; j < count+ss; j++) {
@@ -1175,7 +1213,6 @@ int main(int argc, char **argv) {
         assert(retval == DICT_OK);
     }
     end_benchmark("Inserting");
-    printf("size:%llu\n", dictSize(dict));
     assert((long)dictSize(dict) == count);
 
     /* Wait for rehashing. */

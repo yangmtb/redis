@@ -81,6 +81,8 @@ typedef struct dict {
     unsigned long iterators; /* number of iterators currently running */
 } dict;
 
+// dict -> dict hast table -> dict entry
+
 /* If safe is set to 1 this is a safe iterator, that means, you can call
  * dictAdd, dictFind, and other functions against the dictionary even while
  * iterating. Otherwise it is a non safe iterator, and only dictNext()
